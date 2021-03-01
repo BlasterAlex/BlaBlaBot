@@ -88,10 +88,10 @@ module.exports = function (bot, chatId, query, tripsQty = 1) {
       let tripStrs = [];
       trips.slice(0, tripsQty).forEach(trip => {
         tripStrs.push(
-          `Время: ${trip.trip_duration}\n` +
-          `Цена: ${trip.price}\n` +
-          `Откуда: ${trip.waypoints[0]}\n` +
-          `Куда: ${trip.waypoints[1]}\n` +
+          `Время: *${trip.trip_duration}*\n` +
+          `Цена: _${trip.price}_\n` +
+          `Откуда: ${trip.waypoints[0]} (${trip.walking.before} m)\n` +
+          `Куда: ${trip.waypoints[1]} (${trip.walking.after} m)\n` +
           (trip.car !== undefined ? `Машина: ${trip.car}\n` : '') +
           trip.link
         );
@@ -99,7 +99,7 @@ module.exports = function (bot, chatId, query, tripsQty = 1) {
 
       bot.deleteMessage(chatId, messageId).then(() => {
         bot.sendMessage(chatId, tripStrs.length ?
-          'Вот, что я нашёл:\n' + tripStrs.join('\n\n') :
+          'Вот, что я нашёл:\n\n' + tripStrs.join('\n\n') :
           'По данному запросу ничего не нашёл, попробуйте усточнить адрес или выбрать другое время /edit', {
           parse_mode: 'markdown'
         });
