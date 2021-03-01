@@ -24,13 +24,7 @@ console.log('Bot server started in the ' + (process.env.NODE_ENV || 'development
 
 // Обработка сообщений
 bot.onText(/(.+)/, (msg) => {
-
   comParser(bot, msg);
-
-});
-
-// Обработка кнопок ответа
-bot.on('callback_query', (msg) => {
 });
 
 // Вывод ошибок
