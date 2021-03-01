@@ -1,0 +1,42 @@
+{
+  "name": "blablabot",
+  "version": "1.0.0",
+  "description": "Telegram bot for finding the best trips to BlaBlaCar",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint '**/*.js'",
+    "lint:fix": "eslint '**/*.js' --fix",
+    "kill": "kill `sudo netstat -nlp | grep :5000 | grep -oP '(\\d+)(?=/node)'`",
+    "dev:linux": "wget --spider https://api.telegram.org/bot`sed -En 's/^\\s*\"TELEGRAM_TOKEN\":\\s*\"(.*)\",?/\\1/p' config/private.json`/setWebhook\\?url\\= --delete-after",
+    "dev:win32": "@powershell -NoProfile -ExecutionPolicy Unrestricted -Command .\\scripts\\dev.ps1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "'https://gitlab.com/BlasterAlex/blablabot.git'"
+  },
+  "keywords": [
+    "blablacar",
+    "telegram",
+    "bot"
+  ],
+  "author": "Alex Pish",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "geodist": "^0.2.1",
+    "moment-timezone": "^0.5.33",
+    "mongoose": "^5.11.18",
+    "node-fetch": "^2.6.1",
+    "node-geocoder": "^3.27.0",
+    "node-telegram-bot-api": "^0.51.0",
+    "pattern-emitter": "^1.0.0",
+    "socks5-https-client": "^1.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.21.0"
+  }
+}

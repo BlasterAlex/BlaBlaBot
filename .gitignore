@@ -1,0 +1,8 @@
+node_modules
+*-lock.json
+*-debug.log
+
+data/mailing
+config/private.json
+log/**
+!.gitkeep
