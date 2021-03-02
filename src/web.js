@@ -19,7 +19,7 @@ var server = app.listen(process.env.PORT || 5000, '0.0.0.0', () => {
 // Держать бота активным
 if (process.env.HEROKU_URL) {
 
-  const interval = 25 * 60 * 1000; // interval in milliseconds - 25 mins
+  const interval = 15 * 60 * 1000; // interval in milliseconds - 15 mins
   (function wake(url) {
     var handler;
     try {
