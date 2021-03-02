@@ -159,7 +159,7 @@ const editTrip = (bot, chatId, editField, callback) => {
 
               // Поиск ссылки в сообщении
               let match = data.match(/(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))/);
-              if (match[1]) {
+              if (match && match[1]) {
                 const link = decodeURI(match[1]);
                 const hostname = new URL(link).hostname;
 
