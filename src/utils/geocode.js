@@ -7,9 +7,14 @@ const geocoder = require('node-geocoder')({
 });
 
 // Получение координат по адресу
-module.exports = function (address, callback) {
+module.exports.getGeocode = function (address, callback) {
   geocoder.geocode({
     address: address,
     countryCode: config.countryCode
   }).then(callback);
+};
+
+// Получение адреса по координатам
+module.exports.getAddress = function (location, callback) {
+  geocoder.reverse({ lat: location.latitude, lon: location.longitude }).then(callback);
 };

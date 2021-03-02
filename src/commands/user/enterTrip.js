@@ -16,33 +16,40 @@ moment.locale(config.locale);
 const questions = [
   {
     'quest': 'Дата поездки',
-    'varName': 'date'
+    'varName': 'date',
+    'keys': ['date', 'дата']
   },
   {
     'quest': 'Время поездки в формате *ЧЧ:ММ*',
-    'varName': 'time'
+    'varName': 'time',
+    'keys': ['time', 'время']
   },
   {
-    'quest': 'Откуда поедем?',
-    'varName': 'from'
+    'quest': 'Откуда поедем?\n' + fs.readFileSync('data/messages/enterAddress.txt'),
+    'varName': 'from',
+    'keys': ['from', 'откуда']
   },
   {
-    'quest': 'Куда поедем?',
-    'varName': 'to'
+    'quest': 'Куда поедем?\n' + fs.readFileSync('data/messages/enterAddress.txt'),
+    'varName': 'to',
+    'keys': ['to', 'куда']
   }
 ];
 
-// Ввод нужной поездки пользователем
-module.exports = function (bot, chatId, callback) {
+// Редактирование запроса или ввод полного запроса
+const editTrip = (bot, chatId, editField, callback) => {
 
   // Подключение обработчиков событий
   const emitter = new Emitter();
   bot.onText(/(.+)/, (msg) => {
-    emitter.emit(msg.text, msg.text);
+    emitter.emit('text', msg.text);
+  });
+  bot.on('location', (msg) => {
+    emitter.emit('location', msg.location);
   });
 
   // Задать вопрос и получить ответ
-  const askQuestion = (callback, questNum = 0, answers = {}) => {
+  const askQuestion = (callback, questNum = 0, answers = {}, onlyOneField = false) => {
     const question = questions[questNum];
     bot.sendMessage(chatId, question.quest, {
       parse_mode: 'markdown'
@@ -57,8 +64,10 @@ module.exports = function (bot, chatId, callback) {
               parse_mode: 'markdown'
             }).then(() => {
               answers[question.varName] = mDate.format('YYYY-MM-DD');
-              if (questNum == questions.length - 1)
+
+              if (onlyOneField || questNum == questions.length - 1)
                 return callback(answers);
+
               askQuestion(callback, questNum + 1, answers);
             });
           });
@@ -70,7 +79,7 @@ module.exports = function (bot, chatId, callback) {
 
           // Получение валидного времени
           const getValidTime = () => {
-            emitter.once(/(.+)/, function (data) {
+            emitter.once('text', function (data) {
               if (data.toLowerCase() == 'отмена')
                 return callback(null);
 
@@ -85,7 +94,7 @@ module.exports = function (bot, chatId, callback) {
 
               answers[question.varName] = time.format('HH:mm:ss');
 
-              if (questNum == questions.length - 1)
+              if (onlyOneField || questNum == questions.length - 1)
                 return callback(answers);
 
               askQuestion(callback, questNum + 1, answers);
@@ -104,12 +113,11 @@ module.exports = function (bot, chatId, callback) {
 
           // Поиск введенного адреса
           const findAddress = () => {
-            emitter.once(/(.+)/, function (data) {
-              if (data.toLowerCase() == 'отмена')
-                return callback(null);
 
-              // Поиск адреса
-              geocode(data, (res) => {
+            // Ввод координат с виджета
+            emitter.once('location', function (location) {
+              emitter.removeAllListeners('text');
+              geocode.getAddress(location, (res) => {
 
                 // Нет результатов
                 if (res[0] === undefined) {
@@ -131,10 +139,104 @@ module.exports = function (bot, chatId, callback) {
                 }).then(() => {
                   answers[question.varName] = [
                     address,
+                    [location.latitude, location.longitude]
+                  ];
+
+                  if (onlyOneField || questNum == questions.length - 1)
+                    return callback(answers);
+
+                  askQuestion(callback, questNum + 1, answers);
+                });
+              });
+            });
+
+            // Ввод адреса с клавиатуры
+            emitter.once('text', function (data) {
+
+              emitter.removeAllListeners('location');
+              if (data.toLowerCase() == 'отмена')
+                return callback(null);
+
+              // Поиск ссылки в сообщении
+              let match = data.match(/(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))/);
+              if (match[1]) {
+                const link = decodeURI(match[1]);
+                const hostname = new URL(link).hostname;
+
+                // Поиск координат в ссылке
+                let location = link.match(/(\d+\.\d+)/g);
+
+                // Найденны координаты, поиск адреса
+                if (location && location.length >= 2) {
+
+                  // Яндекс очень странный
+                  location = {
+                    latitude: parseFloat(hostname === 'yandex.ru' ? location[1] : location[0]),
+                    longitude: parseFloat(hostname === 'yandex.ru' ? location[0] : location[1])
+                  };
+
+                  return geocode.getAddress(location, (res) => {
+
+                    // Нет результатов
+                    if (res[0] === undefined) {
+                      return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
+                        parse_mode: 'markdown'
+                      }).then(() => {
+                        findAddress();
+                      });
+                    }
+
+                    const result = res[0];
+                    const address =
+                      [result.country, result.state, result.streetName, result.streetNumber]
+                        .filter(e => e != null)
+                        .join(', ');
+
+                    bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
+                      parse_mode: 'markdown'
+                    }).then(() => {
+                      answers[question.varName] = [
+                        address,
+                        [location.latitude, location.longitude]
+                      ];
+
+                      if (onlyOneField || questNum == questions.length - 1)
+                        return callback(answers);
+
+                      askQuestion(callback, questNum + 1, answers);
+                    });
+                  });
+                }
+              }
+
+              // Поиск адреса
+              geocode.getGeocode(data, (res) => {
+
+                // Нет результатов
+                if (res[0] === undefined) {
+                  return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
+                    parse_mode: 'markdown'
+                  }).then(() => {
+                    findAddress();
+                  });
+                }
+
+                const result = res[0];
+                const address =
+                  [result.country, result.state, result.streetName, result.streetNumber]
+                    .filter(e => e != null)
+                    .join(', ');
+
+                bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
+                  parse_mode: 'markdown'
+                }).then(() => {
+
+                  answers[question.varName] = [
+                    address,
                     [result.latitude, result.longitude]
                   ];
 
-                  if (questNum == questions.length - 1)
+                  if (onlyOneField || questNum == questions.length - 1)
                     return callback(answers);
 
                   askQuestion(callback, questNum + 1, answers);
@@ -142,20 +244,37 @@ module.exports = function (bot, chatId, callback) {
 
               });
             });
+
           };
 
           findAddress();
-
           break;
         }
       }
     });
   };
 
-  // Формирование поездки
+  // Если введено поле для редактирования
+  if (editField) {
+    return askQuestion(answers => {
+      if (!answers)
+        return callback(answers);
+      UserRepository.find(chatId, users => {
+        let user = users[0];
+        user[editField.varName] = answers[editField.varName];
+        UserRepository.save(chatId, user, () => {
+          callback(user);
+        });
+      });
+    }, questions.indexOf(editField), {}, true);
+  }
+
+  // Формирование полного запроса
   bot.sendMessage(chatId, fs.readFileSync('data/messages/enterTrip.txt'), {
     parse_mode: 'markdown'
   }).then(askQuestion(answers => {
+    if (!answers)
+      return callback(answers);
     getFullName(bot, chatId, fullName => {
       answers.fullName = fullName;
       UserRepository.save(chatId, answers, () => {
@@ -163,4 +282,39 @@ module.exports = function (bot, chatId, callback) {
       });
     });
   }));
+};
+
+// Ввод нужной поездки пользователем
+module.exports = function (bot, chatId, varName, callback) {
+
+  // Поле для редактирования
+  let editField = null;
+
+  // Проверка введенного параметра
+  varName = varName.toLowerCase();
+  if (varName != 'all') {
+
+    // Введено неправильное имя
+    if (!questions.filter(q => q.keys.includes(varName)).length) {
+      let keys = [];
+      questions.forEach(q => {
+        keys.push('- ' + q.keys.join(', '));
+      });
+      return callback(fs.readFileSync('data/messages/editHelp.txt') +
+        '\n\nДоступный список имен:\n' + keys.join('\n'), 400);
+    }
+
+    // Выбор поля для редактирования
+    editField = questions.filter(q => q.keys.includes(varName))[0];
+
+    // Проверка наличия записи в бд
+    return UserRepository.find(chatId, users => {
+      if (!users.length)
+        return callback(fs.readFileSync('data/messages/editNoEntity.txt'), 404);
+      editTrip(bot, chatId, editField, callback);
+    });
+  }
+
+  // Редактирование запроса или ввод полного запроса
+  editTrip(bot, chatId, editField, callback);
 };

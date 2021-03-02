@@ -28,6 +28,7 @@ module.exports = (bot, msg) => {
         bestTrips(bot, chatId, tripQuery);
       });
       break;
+    // Поездки
     case (match = lowerMsg.match(/(\/trips|поездки)\s*(.*)/) || {}).input: {
       getTrip(bot, chatId, (tripQuery) => {
         if (!tripQuery)
@@ -38,14 +39,25 @@ module.exports = (bot, msg) => {
       });
       break;
     }
-    case '/edit':
-    case 'ред':
-      enterTrip(bot, chatId, () => {
-        bot.sendMessage(chatId, 'Запрос успешно изменен!\n/trip для поиска поездок по запросу', {
+    // Изменение запроса
+    case (match = lowerMsg.match(/(\/edit|ред)\s*(.*)/) || {}).input: {
+      enterTrip(bot, chatId, (match[2] ? match[2] : 'all'), (res, status = 200) => {
+        if (!res)
+          return bot.sendMessage(chatId, 'Вы отменили запрос', {
+            parse_mode: 'markdown'
+          });
+
+        if (status === 400 || status === 404)
+          return bot.sendMessage(chatId, res, {
+            parse_mode: 'markdown'
+          });
+
+        bot.sendMessage(chatId, fs.readFileSync('data/messages/editSuccess.txt'), {
           parse_mode: 'markdown'
         });
       });
       break;
+    }
     case '/help':
     case '/start':
     case 'помощь':

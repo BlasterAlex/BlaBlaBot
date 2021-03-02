@@ -1,3 +1,4 @@
+const fs = require('fs');
 const UserRepository = require('../../repositories/UserRepository');
 const Emitter = require('pattern-emitter');
 const enterTrip = require('../user/enterTrip');
@@ -8,7 +9,7 @@ module.exports = function (bot, chatId, callback) {
 
     // Пользователь на найден
     if (!user.length) {
-      return enterTrip(bot, chatId, callback);
+      return enterTrip(bot, chatId, 'all', callback);
     }
 
     // Вывод сохраненного запроса и клавиатуры для ответа пользователя
@@ -62,7 +63,9 @@ module.exports = function (bot, chatId, callback) {
 
     emitter.on(change, function () {
       dropInlineKeyboard(() => {
-        enterTrip(bot, chatId, callback);
+        bot.sendMessage(chatId, fs.readFileSync('data/messages/editHelp.txt'), {
+          parse_mode: 'markdown'
+        });
       });
     });
 
