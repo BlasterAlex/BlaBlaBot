@@ -1,6 +1,7 @@
 const fs = require('fs');
 const Emitter = require('pattern-emitter');
 const moment = require('moment-timezone');
+const puppeteer = require('puppeteer');
 
 // Подключаемые модули
 const Calendar = require('../../utils/calendar');
@@ -111,7 +112,7 @@ const editTrip = (bot, chatId, editField, callback) => {
         case 'from':
         case 'to': {
 
-          // Поиск введенного адреса
+          // Поиск введенного адреса или разбор ссылки
           const findAddress = () => {
 
             // Ввод координат с виджета
@@ -157,92 +158,149 @@ const editTrip = (bot, chatId, editField, callback) => {
               if (data.toLowerCase() == 'отмена')
                 return callback(null);
 
+              // Поиск адреса по тексту
+              const findAddressByText = (data) => {
+                geocode.getGeocode(data, (res) => {
+
+                  // Нет результатов
+                  if (res[0] === undefined) {
+                    return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
+                      parse_mode: 'markdown'
+                    }).then(() => {
+                      findAddress();
+                    });
+                  }
+
+                  const result = res[0];
+                  const address =
+                    [result.country, result.state, result.streetName, result.streetNumber]
+                      .filter(e => e != null)
+                      .join(', ');
+
+                  bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
+                    parse_mode: 'markdown'
+                  }).then(() => {
+
+                    answers[question.varName] = [
+                      address,
+                      [result.latitude, result.longitude]
+                    ];
+
+                    if (onlyOneField || questNum == questions.length - 1)
+                      return callback(answers);
+
+                    askQuestion(callback, questNum + 1, answers);
+                  });
+
+                });
+              };
+
+              // Поиск адреса по заданным координатам
+              const findAddressByLocation = (hostname, location) => {
+
+                // Яндекс очень странный
+                location = {
+                  latitude: parseFloat(hostname === 'yandex.ru' ? location[1] : location[0]),
+                  longitude: parseFloat(hostname === 'yandex.ru' ? location[0] : location[1])
+                };
+
+                geocode.getAddress(location, (res) => {
+
+                  // Нет результатов
+                  if (res[0] === undefined) {
+                    return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
+                      parse_mode: 'markdown'
+                    }).then(() => {
+                      findAddress();
+                    });
+                  }
+
+                  const result = res[0];
+                  const address =
+                    [result.country, result.state, result.streetName, result.streetNumber]
+                      .filter(e => e != null)
+                      .join(', ');
+
+                  bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
+                    parse_mode: 'markdown'
+                  }).then(() => {
+                    answers[question.varName] = [
+                      address,
+                      [location.latitude, location.longitude]
+                    ];
+
+                    if (onlyOneField || questNum == questions.length - 1)
+                      return callback(answers);
+
+                    askQuestion(callback, questNum + 1, answers);
+                  });
+                });
+              };
+
               // Поиск ссылки в сообщении
               let match = data.match(/(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*))/);
+
+              // Найдена ссылка, разбор ссылки
               if (match && match[1]) {
+
+                const geocodeRegex = /(\d+\.\d+)/g;
                 const link = decodeURI(match[1]);
                 const hostname = new URL(link).hostname;
 
                 // Поиск координат в ссылке
-                let location = link.match(/(\d+\.\d+)/g);
+                let location = link.match(geocodeRegex);
 
-                // Найденны координаты, поиск адреса
+                // Найденны координаты в ссылке, поиск адреса
                 if (location && location.length >= 2) {
+                  return findAddressByLocation(hostname, location);
+                }
 
-                  // Яндекс очень странный
-                  location = {
-                    latitude: parseFloat(hostname === 'yandex.ru' ? location[1] : location[0]),
-                    longitude: parseFloat(hostname === 'yandex.ru' ? location[0] : location[1])
-                  };
+                // Попытка найти координаты при переходе по ссылке
+                return (async () => {
+                  try {
 
-                  return geocode.getAddress(location, (res) => {
+                    // Запустить браузер
+                    const browser = await puppeteer.launch({
+                      headless: true,
+                      defaultViewport: null,
+                      args: [
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox'
+                      ]
+                    });
 
-                    // Нет результатов
-                    if (res[0] === undefined) {
-                      return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
-                        parse_mode: 'markdown'
-                      }).then(() => {
-                        findAddress();
-                      });
+                    // Перейти на страницу
+                    const page = await browser.newPage();
+                    await page.goto(link);
+
+                    // Получить ссылку
+                    const curLink = decodeURI(await page.evaluate(() => location.href));
+
+                    // Закрыть браузер
+                    browser.close();
+
+                    // Поиск координат в ссылке
+                    let location = curLink.match(geocodeRegex);
+
+                    // Найденны координаты в ссылке, поиск адреса
+                    if (location && location.length >= 2) {
+                      return findAddressByLocation(hostname, location);
                     }
 
-                    const result = res[0];
-                    const address =
-                      [result.country, result.state, result.streetName, result.streetNumber]
-                        .filter(e => e != null)
-                        .join(', ');
+                    // Координаты не найдены 
+                    // Разбор адреса
+                    findAddressByText(data);
 
-                    bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
-                      parse_mode: 'markdown'
-                    }).then(() => {
-                      answers[question.varName] = [
-                        address,
-                        [location.latitude, location.longitude]
-                      ];
+                  } catch (err) {
+                    console.error(err);
+                    return null;
+                  }
+                })();
 
-                      if (onlyOneField || questNum == questions.length - 1)
-                        return callback(answers);
-
-                      askQuestion(callback, questNum + 1, answers);
-                    });
-                  });
-                }
               }
 
               // Поиск адреса
-              geocode.getGeocode(data, (res) => {
-
-                // Нет результатов
-                if (res[0] === undefined) {
-                  return bot.sendMessage(chatId, 'Не нашел такого адреса, попробуйте еще раз', {
-                    parse_mode: 'markdown'
-                  }).then(() => {
-                    findAddress();
-                  });
-                }
-
-                const result = res[0];
-                const address =
-                  [result.country, result.state, result.streetName, result.streetNumber]
-                    .filter(e => e != null)
-                    .join(', ');
-
-                bot.sendMessage(chatId, `Найденный адрес: *${address}*`, {
-                  parse_mode: 'markdown'
-                }).then(() => {
-
-                  answers[question.varName] = [
-                    address,
-                    [result.latitude, result.longitude]
-                  ];
-
-                  if (onlyOneField || questNum == questions.length - 1)
-                    return callback(answers);
-
-                  askQuestion(callback, questNum + 1, answers);
-                });
-
-              });
+              findAddressByText(data);
             });
 
           };

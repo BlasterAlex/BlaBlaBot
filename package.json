@@ -34,6 +34,7 @@
     "node-geocoder": "^3.27.0",
     "node-telegram-bot-api": "^0.51.0",
     "pattern-emitter": "^1.0.0",
+    "puppeteer": "^8.0.0",
     "socks5-https-client": "^1.2.1"
   },
   "devDependencies": {
