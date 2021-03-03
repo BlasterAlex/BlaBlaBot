@@ -1,6 +1,6 @@
 {
   "name": "blablabot",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Telegram bot for finding the best trips to BlaBlaCar",
   "main": "index.js",
   "scripts": {
@@ -29,7 +29,7 @@
     "express": "^4.17.1",
     "geodist": "^0.2.1",
     "moment-timezone": "^0.5.33",
-    "mongoose": "^5.11.18",
+    "mongoose": "^5.11.15",
     "node-fetch": "^2.6.1",
     "node-geocoder": "^3.27.0",
     "node-telegram-bot-api": "^0.51.0",
