@@ -6,8 +6,8 @@ const comParser = require('./commands/parser');
 // Настройки подключения и запуск бота
 var bot;
 if (process.env.TELEGRAM_TOKEN) {
-  bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
-  // bot.setWebHook(process.env.HEROKU_URL + bot.token);
+  bot = new TelegramBot(process.env.TELEGRAM_TOKEN);
+  bot.setWebHook(process.env.HEROKU_URL + bot.token);
 } else {
   bot = new TelegramBot(require('../config/private.json').TELEGRAM_TOKEN, {
     polling: true,
