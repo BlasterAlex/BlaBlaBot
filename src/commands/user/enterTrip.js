@@ -34,6 +34,11 @@ const questions = [
     'quest': 'Куда поедем?\n' + fs.readFileSync('data/messages/enterAddress.txt'),
     'varName': 'to',
     'keys': ['to', 'куда']
+  },
+  {
+    'quest': 'По какому критерию подбирать поездки?',
+    'varName': 'sortBy',
+    'keys': ['sort', 'сорт', 'сортировка']
   }
 ];
 
@@ -42,11 +47,11 @@ const editTrip = (bot, chatId, editField, callback) => {
 
   // Подключение обработчиков событий
   const emitter = new Emitter();
+
+  // Событие ввода текста с клавиатуры
   bot.onText(/(.+)/, (msg) => {
-    emitter.emit('text', msg.text);
-  });
-  bot.on('location', (msg) => {
-    emitter.emit('location', msg.location);
+    if (msg.from.id === chatId)
+      emitter.emit('text', msg.text);
   });
 
   // Задать вопрос и получить ответ
@@ -54,8 +59,14 @@ const editTrip = (bot, chatId, editField, callback) => {
     const question = questions[questNum];
     bot.sendMessage(chatId, question.quest, {
       parse_mode: 'markdown'
-    }).then(function () {
+    }).then(function (sender) {
+
+      // Текущее сообщение
+      const messageId = sender.message_id;
+
+      // Выбор типа вопроса
       switch (question.varName) {
+
         // Выбор даты
         case 'date': {
           const calendar = new Calendar(bot, chatId);
@@ -111,6 +122,12 @@ const editTrip = (bot, chatId, editField, callback) => {
         // Выбор адреса
         case 'from':
         case 'to': {
+
+          // Обработчик события ввода геопозиции
+          bot.on('location', (msg) => {
+            if (msg.from.id === chatId)
+              emitter.emit('location', msg.location);
+          });
 
           // Поиск введенного адреса или разбор ссылки
           const findAddress = () => {
@@ -306,6 +323,81 @@ const editTrip = (bot, chatId, editField, callback) => {
           };
 
           findAddress();
+          break;
+        }
+
+        // Сортировка
+        case 'sortBy': {
+
+          // Вывод вопроса пользователю
+          const price = 'price';
+          const departure_datetime = 'departure_datetime';
+          const cancel = 'cancel';
+          bot.editMessageText(question.quest, {
+            chat_id: chatId,
+            message_id: sender.message_id,
+            parse_mode: 'markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: 'Цена', callback_data: price },
+                  { text: 'Время', callback_data: departure_datetime },
+                  { text: 'Отмена', callback_data: cancel }
+                ]
+              ]
+            }
+          }).then(function () {
+
+            // Подключение обработчиков событий
+            const emitter = new Emitter();
+            bot.on('callback_query', function (callbackQuery) {
+              if (callbackQuery.from.id === chatId)
+                bot.answerCallbackQuery(callbackQuery.id).then(function () {
+                  emitter.emit(callbackQuery.data, callbackQuery.data);
+                });
+            });
+
+            // Удаление клавиатуры и обработчиков событий
+            const events = [price, departure_datetime, cancel];
+            const dropInlineKeyboard = (callback) => {
+              bot.deleteMessage(chatId, messageId);
+              events.forEach(function (event) {
+                emitter.removeAllListeners(event);
+              });
+              callback();
+            };
+
+            // События выбора пользователя
+            emitter.on(price, function () {
+              dropInlineKeyboard(() => {
+                return bot.sendMessage(chatId, 'Вы выбрали сортировку по цене', {
+                  parse_mode: 'markdown'
+                }).then(() => {
+                  answers[question.varName] = 'price';
+                  if (onlyOneField || questNum == questions.length - 1)
+                    return callback(answers);
+                  askQuestion(callback, questNum + 1, answers);
+                });
+              });
+            });
+            emitter.on(departure_datetime, function () {
+              dropInlineKeyboard(() => {
+                return bot.sendMessage(chatId, 'Вы выбрали сортировку по времени', {
+                  parse_mode: 'markdown'
+                }).then(() => {
+                  answers[question.varName] = 'departure_datetime';
+                  if (onlyOneField || questNum == questions.length - 1)
+                    return callback(answers);
+                  askQuestion(callback, questNum + 1, answers);
+                });
+              });
+            });
+            emitter.on(cancel, function () {
+              dropInlineKeyboard(() => {
+                callback(null);
+              });
+            });
+          });
           break;
         }
       }

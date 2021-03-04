@@ -42,9 +42,6 @@ const reformatTrips = function (trips) {
 // Поиск наулучших поездок
 module.exports = function (bot, chatId, query, tripsQty = 1) {
 
-  // price or departure_datetime
-  const sortBy = 'price';
-
   // Для измерения расстояния пешком
   const distUnit = 'meters';
 
@@ -55,7 +52,7 @@ module.exports = function (bot, chatId, query, tripsQty = 1) {
   const url = `https://public-api.blablacar.com/api/v3/trips?key=${apiKey}&` +
     `from_coordinate=${query.from[1].join(',')}&from_country=RU&to_coordinate=${query.to[1].join(',')}&` +
     `to_country=RU&locale=ru-RU&currency=RUB&start_date_local=${query.date}T${query.time}&` +
-    `count=25&sort=${sortBy}:asc`;
+    `count=25&sort=${query.sortBy}:asc`;
 
   bot.sendMessage(chatId, 'Ищу поездки для вас :)', {
     parse_mode: 'markdown'

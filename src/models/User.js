@@ -7,6 +7,7 @@ var userSchema = new mongoose.Schema({
   time: { type: String, required: true },
   from: { type: Array, required: true },
   to: { type: Array, required: true },
+  sortBy: { type: String, required: true },
 }, { _id: false, versionKey: false });
 
 module.exports = mongoose.model('User', userSchema, 'User');

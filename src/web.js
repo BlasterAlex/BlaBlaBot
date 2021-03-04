@@ -1,7 +1,7 @@
-const fetch = require('node-fetch');
 const express = require('express');
 const bodyParser = require('body-parser');
 const packageInfo = require('../package.json');
+// const fetch = require('node-fetch');
 
 const app = express();
 app.use(bodyParser.json());

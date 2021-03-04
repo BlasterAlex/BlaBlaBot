@@ -21,7 +21,8 @@ module.exports = function (bot, chatId, callback) {
       `Дата: *${user[0].date}*\n` +
       `Время: *${user[0].time}*\n` +
       `Откуда: *${user[0].from[0]}*\n` +
-      `Куда: *${user[0].to[0]}*`, {
+      `Куда: *${user[0].to[0]}*\n` +
+      `Сортировка: *${user[0].sortBy == 'price' ? 'по цене' : 'по времени'}*`, {
       parse_mode: 'markdown',
       reply_markup: {
         inline_keyboard: [
@@ -40,9 +41,10 @@ module.exports = function (bot, chatId, callback) {
     // Подключение обработчиков событий
     const emitter = new Emitter();
     bot.on('callback_query', function (callbackQuery) {
-      bot.answerCallbackQuery(callbackQuery.id).then(function () {
-        emitter.emit(callbackQuery.data, callbackQuery.data);
-      });
+      if (callbackQuery.from.id === chatId)
+        bot.answerCallbackQuery(callbackQuery.id).then(function () {
+          emitter.emit(callbackQuery.data, callbackQuery.data);
+        });
     });
 
     // Удаление клавиатуры и обработчиков событий
