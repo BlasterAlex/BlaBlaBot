@@ -25,22 +25,22 @@ const pingHeroku = (url) => {
     .catch(err => console.error(`Ping heroku error: ${err}`));
 };
 
-// Держать бота активным
-if (process.env.HEROKU_URL) {
+// // Держать бота активным
+// if (process.env.HEROKU_URL) {
 
-  const interval = 15 * 60 * 1000; // interval in milliseconds - 15 mins
-  (function wake(url) {
-    var handler;
-    try {
-      handler = setInterval(pingHeroku(url), interval);
-    } catch (err) {
-      console.error('Ping heroku error: retrying...');
-      clearInterval(handler);
-      return setTimeout(() => wake(url), 10000);
-    }
-  })(process.env.HEROKU_URL);
+//   const interval = 15 * 60 * 1000; // interval in milliseconds - 15 mins
+//   (function wake(url) {
+//     var handler;
+//     try {
+//       handler = setInterval(pingHeroku(url), interval);
+//     } catch (err) {
+//       console.error('Ping heroku error: retrying...');
+//       clearInterval(handler);
+//       return setTimeout(() => wake(url), 10000);
+//     }
+//   })(process.env.HEROKU_URL);
 
-}
+// }
 
 module.exports.pingHeroku = pingHeroku;
 
