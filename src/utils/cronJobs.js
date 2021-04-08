@@ -9,7 +9,7 @@ const randomPhoto = require('./randomPhoto');
 var cronJobsMap = new Map();
 
 // Таймер для cron задач
-const cronMinutes = 1;
+const cronMinutes = 5;
 
 // Создание cron-задач на основе информации из БД (запускается при старте сервера)
 const createAll = (bot) => {
@@ -59,7 +59,8 @@ const create = (bot, chatId, results) => {
       const image = randomPhoto.fromDir('data/images/cronCreate');
       const imageExt = image.split('.').pop();
       bot.sendPhoto(chatId, fs.readFileSync(image), {
-        caption: fs.readFileSync('data/messages/cronCreate.txt'),
+        caption: fs.readFileSync('data/messages/cronCreate.txt')
+      }, {
         filename: 'cron-create',
         contentType: 'image/' + imageExt
       });
