@@ -52,7 +52,7 @@ const create = (bot, chatId, results) => {
         cronJobsMap.get(key).stop();
         cronJobsMap.delete(key);
       }
-      cronJobsMap.set(key, new CronJob(`${cronMinutes} * * * *`,
+      cronJobsMap.set(key, new CronJob(`*/${cronMinutes} * * * *`,
         () => bestTrips.research(bot, chatId), null, true, config.timeZone));
 
       // Отправить сообщение с случайной картинкой
