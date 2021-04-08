@@ -1,7 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
-
-// Подключаемые модули
-const comParser = require('./commands/parser');
+const parseCommand = require('./commands/parser');
+const cronJobs = require('./utils/cronJobs');
 
 // Настройки подключения и запуск бота
 var bot;
@@ -22,13 +21,15 @@ if (process.env.TELEGRAM_TOKEN) {
 }
 console.log('Bot server started in the ' + (process.env.NODE_ENV || 'development') + ' mode');
 
+// Фоновые события по таймеру
+cronJobs.createAll(bot);
+
 // Обработка сообщений
 bot.onText(/(.+)/, (msg) => {
-  comParser(bot, msg);
+  parseCommand(bot, msg);
 });
 
 // Вывод ошибок
 bot.on('polling_error', (err) => console.error(err));
-
 
 module.exports = { bot };

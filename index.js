@@ -1,4 +1,5 @@
 process.env['NTBA_FIX_319'] = 1;
+process.env['NTBA_FIX_350'] = 1;
 
 // Создание бота
 const bot = require('./src/bot').bot;
@@ -17,4 +18,4 @@ require('mongoose').connect(process.env.MONGODB_URI || require('./config/private
 });
 
 // Запуск бота
-require('./src/web')(bot);
+require('./src/web').run(bot);

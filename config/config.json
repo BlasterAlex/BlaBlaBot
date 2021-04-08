@@ -1,4 +1,5 @@
 {
   "locale": "ru",
-  "countryCode": "ru"
+  "countryCode": "ru",
+  "timeZone": "Europe/Samara"
 }

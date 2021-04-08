@@ -17,9 +17,10 @@ module.exports.find = (chatId, callback) => {
 };
 
 module.exports.save = (chatId, data, callback) => {
-  User.findOneAndUpdate({ _id: chatId }, data, { upsert: true }, function (err, res) {
+  User.findOneAndUpdate({ _id: chatId }, data, { upsert: true }, function (err) {
     if (err)
       return console.error(err);
-    callback();
+    if (typeof callback !== 'undefined')
+      callback();
   });
 };

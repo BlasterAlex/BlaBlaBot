@@ -2,8 +2,8 @@ const fs = require('fs');
 
 // Подключаемые модули
 const whoami = require('./user/whoami');
-const bestTrips = require('../utils/bestTrips');
 const getTrip = require('./user/getTrip');
+const bestTrips = require('../utils/bestTrips');
 const enterTrip = require('../commands/user/enterTrip');
 
 // Разбор команд пользователя
@@ -25,7 +25,7 @@ module.exports = (bot, msg) => {
           return bot.sendMessage(chatId, 'Вы отменили запрос', {
             parse_mode: 'markdown'
           });
-        bestTrips(bot, chatId, tripQuery);
+        bestTrips.search(bot, chatId, tripQuery);
       });
       break;
     // Поездки
@@ -35,7 +35,7 @@ module.exports = (bot, msg) => {
           return bot.sendMessage(chatId, 'Вы отменили запрос', {
             parse_mode: 'markdown'
           });
-        bestTrips(bot, chatId, tripQuery, match[2] ? parseInt(match[2]) : 3);
+        bestTrips.search(bot, chatId, tripQuery, match[2] ? parseInt(match[2]) : 3);
       });
       break;
     }
