@@ -4,7 +4,7 @@ const geodist = require('geodist');
 const cronJobs = require('./cronJobs');
 const isEqual = require('lodash.isequal');
 const pingHeroku = require('../web').pingHeroku;
-const messageKeyboard = require('./UI/messageKeyboard');
+const MessageKeyboard = require('./UI/messageKeyboard');
 const UserRepository = require('../repositories/UserRepository');
 
 // Ключ от blablacar-api
@@ -80,7 +80,12 @@ const getTrips = (query, callback) => {
     }, trips);
 
     // Отбор подходящих поездок по длине пешего расстояния
-    trips = trips.filter(trip => trip.walking_distance < maxWalkingDist);
+    const filtered = trips.filter(trip => trip.walking_distance < maxWalkingDist);
+
+    // Если результат фильтрации - не пустой список
+    if (filtered.length > 0) {
+      trips = filtered;
+    }
 
     // Изменение формата возвращаемых результатов
     trips = reformatTrips(trips);
@@ -120,35 +125,45 @@ module.exports.search = function (bot, chatId, query, tripsQty = 1) {
     // Сохранение id сообщения
     const messageId = sender.message_id;
 
-    // Получение списка поездок
-    getTrips(query, trips => {
+    // Получение текущего пользователя
+    UserRepository.find(chatId, function (users) {
+      let user = users[0];
 
-      // Выборка заданного количества лучших поездок
-      const tripStr = tripsToString(trips, tripsQty);
+      // Получение списка поездок
+      getTrips(query, trips => {
 
-      // Вывод результата поиска
-      bot.deleteMessage(chatId, messageId).then(() => {
+        // Выборка заданного количества лучших поездок
+        const tripStr = tripsToString(trips, tripsQty);
 
-        // Текст сообщения
-        const message = tripStr.length ?
-          'Вот, что я нашёл:\n\n' + tripStr :
-          fs.readFileSync('data/messages/tripsNotFound.txt');
+        // Вывод результата поиска
+        bot.deleteMessage(chatId, messageId).then(() => {
 
-        messageKeyboard(bot, chatId, message,
-          new Map([
-            ['removeCron', {
+          // Текст сообщения
+          const message = tripStr.length ?
+            'Вот, что я нашёл:\n\n' + tripStr :
+            fs.readFileSync('data/messages/tripsNotFound.txt');
+
+          const buttons = new Map;
+
+          if (user.searchTrips) {
+            buttons.set('removeCron', {
               text: 'Поездка найдена',
               callback: () => {
                 cronJobs.remove(bot, chatId);
               }
-            }],
-            ['createCron', {
-              text: 'Уведомить о новых поездках',
-              callback: () => {
-                cronJobs.create(bot, chatId, trips);
-              }
-            }]
-          ]));
+            });
+          }
+
+          buttons.set('createCron', {
+            text: 'Уведомить о новых поездках',
+            callback: () => {
+              cronJobs.create(bot, chatId, trips);
+            }
+          });
+
+          new MessageKeyboard(bot, chatId, message, buttons);
+
+        });
 
       });
     });
@@ -184,7 +199,7 @@ module.exports.research = function (bot, chatId) {
       const message = 'Новые поездочки:\n\n' + tripsToString(difference) +
         '\n\n' + fs.readFileSync('data/messages/cronFound.txt');
 
-      messageKeyboard(bot, chatId, message,
+      new MessageKeyboard(bot, chatId, message,
         new Map([
           ['removeCron', {
             text: 'Поездка найдена',

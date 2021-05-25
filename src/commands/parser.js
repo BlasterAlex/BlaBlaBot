@@ -35,7 +35,7 @@ module.exports = (bot, msg) => {
           return bot.sendMessage(chatId, 'Вы отменили запрос', {
             parse_mode: 'markdown'
           });
-        bestTrips.search(bot, chatId, tripQuery, match[2] ? parseInt(match[2]) : 3);
+        bestTrips.search(bot, chatId, tripQuery, match[2] ? parseInt(match[2]) : 10);
       });
       break;
     }

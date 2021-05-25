@@ -1,7 +1,7 @@
 const fs = require('fs');
 const UserRepository = require('../../repositories/UserRepository');
 const enterTrip = require('../user/enterTrip');
-const messageKeyboard = require('../../utils/UI/messageKeyboard');
+const MessageKeyboard = require('../../utils/UI/messageKeyboard');
 
 // Получение необходимой поездки из бд или запрос ввода пользователем
 module.exports = function (bot, chatId, callback) {
@@ -19,7 +19,7 @@ module.exports = function (bot, chatId, callback) {
       `Куда: *${user[0].to[0]}*\n` +
       `Сортировка: *${user[0].sortBy == 'price' ? 'по цене' : 'по времени'}*`;
 
-    messageKeyboard(bot, chatId, message,
+    new MessageKeyboard(bot, chatId, message,
       new Map([
         ['search', { text: 'Поиск', callback: () => { callback(user[0]); } }],
         ['change', {
