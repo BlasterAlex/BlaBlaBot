@@ -1,6 +1,6 @@
 {
   "name": "blablabot",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Telegram bot for finding the best trips to BlaBlaCar",
   "main": "index.js",
   "scripts": {

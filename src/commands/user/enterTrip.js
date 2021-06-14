@@ -71,19 +71,15 @@ const editTrip = (bot, chatId, editField, callback) => {
         if (data.toLowerCase().trim() === 'отмена')
           return callback(null);
 
-        if (question.varName === 'maximumTime' && data.toLowerCase().trim() === 'null') {
-          answers[question.varName] = null;
-        } else {
-          const time = moment(data, 'HH:mm', true);
-          if (!time.isValid()) {
-            return bot.sendMessage(chatId, 'Неправильный формат времени, попробуйте еще раз', {
-              parse_mode: 'markdown'
-            }).then(() => {
-              getValidTime();
-            });
-          }
-          answers[question.varName] = time.format('HH:mm:ss');
+        const time = moment(data, 'HH:mm', true);
+        if (!time.isValid()) {
+          return bot.sendMessage(chatId, 'Неправильный формат времени, попробуйте еще раз', {
+            parse_mode: 'markdown'
+          }).then(() => {
+            getValidTime();
+          });
         }
+        answers[question.varName] = time.format('HH:mm:ss');
 
         if (onlyOneField || questNum == questions.length - 1)
           return callback(answers);
@@ -139,7 +135,7 @@ const editTrip = (bot, chatId, editField, callback) => {
             new Map([
               ['yes', {
                 text: 'Да', callback: () => {
-                  bot.sendMessage(chatId, 'Введите ограничение в формате *ЧЧ:ММ*\n\nИли *null* для снятия ограничения', {
+                  bot.sendMessage(chatId, 'Введите ограничение в формате *ЧЧ:ММ*', {
                     parse_mode: 'markdown'
                   }).then(function () {
                     getValidTime();
