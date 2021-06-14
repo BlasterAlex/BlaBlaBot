@@ -1,7 +1,7 @@
 const Emitter = require('pattern-emitter');
 
 // Генерирует случайный идентификатор
-var ID = function () { return Math.random().toString(36).substr(2, 9); };
+var ID = () => Math.random().toString(36).substr(2, 9);
 
 // Класс сообщения с кнопками
 class MessageKeyboard {

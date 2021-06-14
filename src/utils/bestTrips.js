@@ -55,7 +55,7 @@ const getTrips = (query, callback) => {
   // Для измерения расстояния пешком
   const distUnit = 'meters';
 
-  // Максимальное расстояние пешком для фильтрации поезок
+  // Максимальное расстояние пешком для фильтрации поездок
   const maxWalkingDist = 10000;
 
   // Запрос к blablacar-api
@@ -97,12 +97,12 @@ const getTrips = (query, callback) => {
 
 // Формирование строки для вывода
 const tripsToString = (trips, tripsQty) => {
-  let tripStrs = [];
+  let tripStrings = [];
   if (tripsQty === undefined)
     tripsQty = trips.length;
 
   trips.slice(0, tripsQty).forEach(trip => {
-    tripStrs.push(
+    tripStrings.push(
       `Время: *${trip.trip_duration}*\n` +
       `Цена: _${trip.price}_\n` +
       `Откуда: ${trip.waypoints[0]} (${trip.walking.before} m)\n` +
@@ -112,10 +112,10 @@ const tripsToString = (trips, tripsQty) => {
     );
   });
 
-  return tripStrs.length ? tripStrs.join('\n\n') : '';
+  return tripStrings.length ? tripStrings.join('\n\n') : '';
 };
 
-// Поиск наулучших поездок
+// Поиск наилучших поездок
 module.exports.search = function (bot, chatId, query, tripsQty = 1) {
 
   bot.sendMessage(chatId, 'Ищу поездки для вас :)', {
@@ -144,6 +144,15 @@ module.exports.search = function (bot, chatId, query, tripsQty = 1) {
             fs.readFileSync('data/messages/tripsNotFound.txt');
 
           const buttons = new Map;
+
+          buttons.set('addLimit', {
+            text: 'Ограничение по времени',
+            callback: () => {
+              bot.sendMessage(chatId, fs.readFileSync('data/messages/setTimeLimit.txt'), {
+                parse_mode: 'markdown'
+              });
+            }
+          });
 
           if (user.searchTrips) {
             buttons.set('removeCron', {

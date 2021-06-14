@@ -27,6 +27,11 @@ const questions = [
     'keys': ['time', 'время']
   },
   {
+    'quest': 'Выставим ограничение по времени?',
+    'varName': 'maximumTime',
+    'keys': ['limit', 'огран', 'ограничение']
+  },
+  {
     'quest': '*Откуда поедем?*\n' + fs.readFileSync('data/messages/enterAddress.txt'),
     'varName': 'from',
     'keys': ['from', 'откуда']
@@ -40,7 +45,7 @@ const questions = [
     'quest': 'По какому критерию подбирать поездки?',
     'varName': 'sortBy',
     'keys': ['sort', 'сорт', 'сортировка']
-  }
+  },
 ];
 
 // Редактирование запроса или ввод полного запроса
@@ -55,10 +60,38 @@ const editTrip = (bot, chatId, editField, callback) => {
       emitter.emit('text', msg.text);
   });
 
+
   // Задать вопрос и получить ответ
   const askQuestion = (callback, questNum = 0, answers = {}, onlyOneField = false) => {
     const question = questions[questNum];
     const message = question.quest;
+
+    // Получение валидного времени
+    const getValidTime = () => {
+      emitter.once('text', function (data) {
+        if (data.toLowerCase().trim() === 'отмена')
+          return callback(null);
+
+        if (question.varName === 'maximumTime' && data.toLowerCase().trim() === 'null') {
+          answers[question.varName] = null;
+        } else {
+          const time = moment(data, 'HH:mm', true);
+          if (!time.isValid()) {
+            return bot.sendMessage(chatId, 'Неправильный формат времени, попробуйте еще раз', {
+              parse_mode: 'markdown'
+            }).then(() => {
+              getValidTime();
+            });
+          }
+          answers[question.varName] = time.format('HH:mm:ss');
+        }
+
+        if (onlyOneField || questNum == questions.length - 1)
+          return callback(answers);
+
+        askQuestion(callback, questNum + 1, answers);
+      });
+    };
 
     bot.sendMessage(chatId, message, {
       parse_mode: 'markdown'
@@ -74,6 +107,11 @@ const editTrip = (bot, chatId, editField, callback) => {
         case 'date': {
           const calendar = new Calendar(bot, chatId);
           calendar.getDate((date) => {
+
+            // Отмена операции
+            if (!date)
+              return callback(null);
+
             const mDate = moment(date, 'DD/MM/YYYY');
             bot.sendMessage(chatId, `Вы ввели: *${mDate.format('DD.MM.YYYY')}*`, {
               parse_mode: 'markdown'
@@ -85,40 +123,39 @@ const editTrip = (bot, chatId, editField, callback) => {
 
               askQuestion(callback, questNum + 1, answers);
             });
+
           });
           break;
         }
 
         // Ввод времени
         case 'time': {
-
-          // Получение валидного времени
-          const getValidTime = () => {
-            emitter.once('text', function (data) {
-              if (data.toLowerCase() == 'отмена')
-                return callback(null);
-
-              const time = moment(data, 'HH:mm', true);
-              if (!time.isValid()) {
-                return bot.sendMessage(chatId, 'Неправильный формат времени, попробуйте еще раз', {
-                  parse_mode: 'markdown'
-                }).then(() => {
-                  getValidTime();
-                });
-              }
-
-              answers[question.varName] = time.format('HH:mm:ss');
-
-              if (onlyOneField || questNum == questions.length - 1)
-                return callback(answers);
-
-              askQuestion(callback, questNum + 1, answers);
-
-            });
-          };
-
           getValidTime();
+          break;
+        }
 
+        // Ограничение на время
+        case 'maximumTime': {
+          new MessageKeyboard(bot, chatId, message,
+            new Map([
+              ['yes', {
+                text: 'Да', callback: () => {
+                  bot.sendMessage(chatId, 'Введите ограничение в формате *ЧЧ:ММ*\n\nИли *null* для снятия ограничения', {
+                    parse_mode: 'markdown'
+                  }).then(function () {
+                    getValidTime();
+                  });
+                }
+              }],
+              ['no', {
+                text: 'Нет', callback: () => {
+                  answers[question.varName] = null;
+                  if (onlyOneField || questNum == questions.length - 1)
+                    return callback(answers);
+                  askQuestion(callback, questNum + 1, answers);
+                }
+              }]
+            ]), 'delete', messageId);
           break;
         }
 
@@ -206,7 +243,7 @@ const editTrip = (bot, chatId, editField, callback) => {
                   // Поиск координат в ссылке
                   let location = link.match(geocodeRegex);
 
-                  // Найденны координаты в ссылке, поиск адреса
+                  // Найдены координаты в ссылке, поиск адреса
                   if (location && location.length >= 2) {
                     return findAddressByLocation(hostname, location);
                   }
@@ -238,7 +275,7 @@ const editTrip = (bot, chatId, editField, callback) => {
                       // Поиск координат в ссылке
                       let location = curLink.match(geocodeRegex);
 
-                      // Найденны координаты в ссылке, поиск адреса
+                      // Найдены координаты в ссылке, поиск адреса
                       if (location && location.length >= 2) {
                         return findAddressByLocation(hostname, location);
                       }
@@ -290,7 +327,7 @@ const editTrip = (bot, chatId, editField, callback) => {
               answers[question.varName] = answer;
 
               // Сохранение адреса в историю
-              const addressHistory = answers['addressHistory'].filter(addres => addres.every((e, i) => e !== answer[i]));
+              const addressHistory = answers['addressHistory'].filter(address => address.every((e, i) => e !== answer[i]));
               if (addressHistory.length >= 5) {
                 addressHistory.shift();
               }

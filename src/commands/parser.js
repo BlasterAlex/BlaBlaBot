@@ -6,11 +6,18 @@ const getTrip = require('./user/getTrip');
 const bestTrips = require('../utils/bestTrips');
 const enterTrip = require('../commands/user/enterTrip');
 
+// Список чатов, для которых нужно временно отключить клавиатуру
+const disableKeyboardFor = new Set();
+
 // Разбор команд пользователя
 module.exports = (bot, msg) => {
   const chatId = msg.chat.id;
   const message = msg.text;
   const lowerMsg = message.toLowerCase();
+
+  // Отключение клавиатуры, если нужно
+  if (disableKeyboardFor.has(chatId))
+    return;
 
   let match;
   switch (lowerMsg) {
@@ -41,7 +48,10 @@ module.exports = (bot, msg) => {
     }
     // Изменение запроса
     case (match = lowerMsg.match(/(\/edit|ред)\s*(.*)/) || {}).input: {
+      disableKeyboardFor.add(chatId);
       enterTrip(bot, chatId, (match[2] ? match[2] : 'all'), (res, status = 200) => {
+        disableKeyboardFor.delete(chatId);
+
         if (!res)
           return bot.sendMessage(chatId, 'Вы отменили запрос', {
             parse_mode: 'markdown'
@@ -65,6 +75,10 @@ module.exports = (bot, msg) => {
         parse_mode: 'markdown'
       });
       break;
+    default:
+      bot.sendMessage(chatId, `Неизвестная команда: *${message}*\n\nДля получения справки /help`, {
+        parse_mode: 'markdown'
+      });
   }
 
 };

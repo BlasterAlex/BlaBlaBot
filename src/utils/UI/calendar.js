@@ -1,26 +1,40 @@
 const moment = require('moment-timezone');
 const Emitter = require('pattern-emitter');
 
-const config = JSON.parse(require('fs').readFileSync('config/config.json'));
+// Локаль клавиатуры (en, ru)
+const locale = require('../../../config/config.json').locale;
+
+// Сообщение с клавиатуры для отмены операции
+const cancelMessage = 'отмена';
 
 // Генерирует случайный идентификатор
-var ID = function () { return '_' + Math.random().toString(36).substr(2, 9); };
+const ID = () => Math.random().toString(36).substr(2, 9);
+
+// Разделяет строку data_id на две переменные
+const splitDataId = (data_id) => {
+  const lastUnderscore = data_id.lastIndexOf('_');
+  const data = data_id.slice(0, lastUnderscore);
+  const id = data_id.slice(lastUnderscore + 1);
+  return [data, id];
+};
 
 // Генерирует пустую строку для виджета календаря
-var emptyLine = function () {
+const emptyLine = function () {
   var arr = [];
   for (var i = 0; i < 7; i++)
-    arr.push({ text: ' ', callback_data: 'none' + ID() });
+    arr.push({ text: ' ', callback_data: 'none_' + ID() });
   return arr;
 };
 
 class Calendar {
 
   constructor(bot, chatId) {
-    moment.locale(config.locale);
+    moment.locale(locale);
 
     this.bot = bot;
     this.chatId = chatId;
+    this.calendarID = ID();
+    this.removed = false;
 
     this.mode = 'calendar';
     this.today = moment();
@@ -50,16 +64,16 @@ class Calendar {
     // Добавление заголовка
     var result = [
       [
-        { text: '<', callback_data: 'prev' },
-        { text: date.format('MM, YYYY'), callback_data: 'month' },
-        { text: '>', callback_data: 'next' }
+        { text: '<', callback_data: 'prev_' + this.calendarID },
+        { text: date.format('MM, YYYY'), callback_data: 'month_' + this.calendarID },
+        { text: '>', callback_data: 'next_' + this.calendarID }
       ]
     ];
 
     // Добавление названий дней недели
     var weekdays = [];
     moment.weekdaysMin(true).forEach(function (el) {
-      weekdays.push({ text: el, callback_data: 'none' + ID() });
+      weekdays.push({ text: el, callback_data: 'none_' + ID() });
     });
     result.push(weekdays);
 
@@ -67,7 +81,7 @@ class Calendar {
     result.push(emptyLine());
     var activeLine = result.length - 1;
     while (date.month() == monthIndex) {
-      result[activeLine][date.weekday()] = { text: date.date(), callback_data: date.format('DD/MM/YYYY') };
+      result[activeLine][date.weekday()] = { text: date.date(), callback_data: date.format('DD/MM/YYYY') + '_' + this.calendarID };
       date.add(1, 'days');
 
       if (date.weekday() == 0 && date.month() == monthIndex) {
@@ -86,9 +100,9 @@ class Calendar {
     var date = moment(this.today);
     var result = [
       [
-        { text: '<', callback_data: 'prev' },
-        { text: date.format('MM, YYYY'), callback_data: 'month' },
-        { text: '>', callback_data: 'next' }
+        { text: '<', callback_data: 'prev_' + this.calendarID },
+        { text: date.format('MM, YYYY'), callback_data: 'month_' + this.calendarID },
+        { text: '>', callback_data: 'next_' + this.calendarID }
       ],
     ];
 
@@ -97,7 +111,7 @@ class Calendar {
     date.add(-Math.round(size / 2), 'months');
 
     for (var i = 0; i < size; i++) {
-      result.push([{ text: date.format('MMMM, YYYY'), callback_data: date.format('MM, YYYY') }]);
+      result.push([{ text: date.format('MMMM, YYYY'), callback_data: date.format('MM, YYYY') + '_' + this.calendarID }]);
       date.add(1, 'months');
     }
 
@@ -111,23 +125,11 @@ class Calendar {
     const prevnext = /prev|next/;
     const selMonth = 'month';
     const month = /\d{2}, \d{4}/;
-    self.events = [prevnext, selMonth, month];
+    const cancel = 'cancel';
+    self.events = [prevnext, selMonth, month, cancel];
 
     // Выбрана дата, конец работы календаря
-    self.emitter.once(/\d{2}\/\d{2}\/\d{4}/, function (data) {
-
-      // Удаление календаря из чата
-      self.bot.deleteMessage(self.chatId, self.messageId);
-
-      // Удаление всех обработчиков событий
-      self.events.forEach(function (event) {
-        self.emitter.removeAllListeners(event);
-      });
-
-      // Вызов функции обратного вызова
-      self.callback(data);
-
-    });
+    self.emitter.once(/\d{2}\/\d{2}\/\d{4}/, data => self.removeCalendar(self, data));
 
     // Предыдущий / следующий месяц
     self.emitter.on(prevnext, function (data) {
@@ -169,6 +171,9 @@ class Calendar {
       self.bot.editMessageText('Выберите дату:', opt);
     });
 
+    // Команда отмены
+    self.emitter.on(cancel, () => self.removeCalendar(self, null));
+
   }
 
   // Вывод календаря и получение даты
@@ -179,9 +184,17 @@ class Calendar {
 
     // Подключение обработчиков событий
     self.bot.on('callback_query', function (callbackQuery) {
-      self.bot.answerCallbackQuery(callbackQuery.id).then(function () {
-        self.emitter.emit(callbackQuery.data, callbackQuery.data);
-      });
+      const [data, id] = splitDataId(callbackQuery.data);
+      if (callbackQuery.from.id === self.chatId && id == self.calendarID)
+        self.bot.answerCallbackQuery(callbackQuery.id).then(function () {
+          self.emitter.emit(data, data);
+        });
+    });
+
+    // Обработка команды отмены
+    self.bot.onText(new RegExp(cancelMessage, 'i'), (msg) => {
+      if (msg.from.id === this.chatId)
+        self.emitter.emit('cancel', 'cancel');
     });
 
     // Вывод виджета календаря в чат
@@ -191,6 +204,25 @@ class Calendar {
 
   }
 
+  // Удаление виджета и всех обработчиков событий
+  removeCalendar(self, data) {
+
+    // Состояние клавиатуры
+    if (self.removed)
+      return;
+    self.removed = true;
+
+    // Удаление календаря из чата
+    self.bot.deleteMessage(self.chatId, self.messageId);
+
+    // Удаление всех обработчиков событий
+    self.events.forEach(function (event) {
+      self.emitter.removeAllListeners(event);
+    });
+
+    // Вызов функции обратного вызова
+    self.callback(data);
+  }
 }
 
 module.exports = Calendar;

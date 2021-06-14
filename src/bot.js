@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const parseCommand = require('./commands/parser');
+const commandParser = require('./commands/parser');
 const cronJobs = require('./utils/cronJobs');
 
 // Настройки подключения и запуск бота
@@ -26,7 +26,7 @@ cronJobs.createAll(bot);
 
 // Обработка сообщений
 bot.onText(/(.+)/, (msg) => {
-  parseCommand(bot, msg);
+  commandParser(bot, msg);
 });
 
 // Вывод ошибок
