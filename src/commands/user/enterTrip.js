@@ -10,9 +10,8 @@ const getFullName = require('../../utils/getFullName');
 const MessageKeyboard = require('../../utils/UI/messageKeyboard');
 const UserRepository = require('../../repositories/UserRepository');
 
-// Установка локали календаря
-const config = require('../../../config/config.json');
-moment.locale(config.locale);
+// Установка локали для даты
+moment.locale(require('../../../config/config.json').locale);
 
 // Вопросы пользователю
 const questions = [

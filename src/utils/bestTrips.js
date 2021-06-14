@@ -3,12 +3,16 @@ const axios = require('axios');
 const geodist = require('geodist');
 const cronJobs = require('./cronJobs');
 const isEqual = require('lodash.isequal');
+const moment = require('moment-timezone');
 const pingHeroku = require('../web').pingHeroku;
 const MessageKeyboard = require('./UI/messageKeyboard');
 const UserRepository = require('../repositories/UserRepository');
 
 // Ключ от blablacar-api
 const apiKey = process.env.BLABLACAR_TOKEN || require('../../config/private.json').BLABLACAR_TOKEN;
+
+// Установка локали для даты
+moment.locale(require('../../config/config.json').locale);
 
 // Скачивание списка поездок с BlaBlaCar
 const loadTrips = (link, trips = [], fromCursor = null) => {
@@ -85,6 +89,14 @@ const getTrips = (query, callback) => {
     // Если результат фильтрации - не пустой список
     if (filtered.length > 0) {
       trips = filtered;
+    }
+
+    // Ограничение по времени
+    if (query.maximumTime) {
+      trips = trips.filter(trip => {
+        return moment(trip.waypoints[0].date_time.match(/T(\d{2}:\d{2})/)[1], 'HH:mm', true)
+          .isBefore(moment(query.maximumTime, 'HH:mm:ss', true));
+      });
     }
 
     // Изменение формата возвращаемых результатов
