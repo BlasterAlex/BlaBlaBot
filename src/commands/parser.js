@@ -3,16 +3,14 @@ const fs = require('fs');
 // Подключаемые модули
 const whoami = require('./user/whoami');
 const getTrip = require('./user/getTrip');
-const bestTrips = require('../utils/bestTrips');
+const bestTrips = require('../utils/trips/findBest');
 const enterTrip = require('../commands/user/enterTrip');
 
 // Список чатов, для которых нужно временно отключить клавиатуру
 const disableKeyboardFor = new Set();
 
 // Разбор команд пользователя
-module.exports = (bot, msg) => {
-  const chatId = msg.chat.id;
-  const message = msg.text;
+module.exports = (bot, chatId, message) => {
   const lowerMsg = message.toLowerCase();
 
   // Отключение клавиатуры, если нужно

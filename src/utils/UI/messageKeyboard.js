@@ -6,7 +6,7 @@ var ID = () => Math.random().toString(36).substr(2, 9);
 // Класс сообщения с кнопками
 class MessageKeyboard {
 
-  constructor(bot, chatId, message, buttons, thenAction, message_id, inline) {
+  constructor(bot, chatId, message, buttons, thenAction, message_id, inline, positioning) {
 
     this.bot = bot;
     this.chatId = chatId;
@@ -21,11 +21,14 @@ class MessageKeyboard {
     // Действие с сообщением после выполнения действия (edit || delete)
     this.thenAction = (thenAction === undefined) ? 'edit' : thenAction;
 
+    // Для редактирования сообщения
+    this.message_id = message_id;
+
     // Расположение кнопок (в линию или в столбец)
     this.inline = (inline === undefined) ? true : inline;
 
-    // Для редактирования сообщения
-    this.message_id = message_id;
+    // Позиционирование кнопок (двумерный массив ключей) - только для inline=false
+    this.positioning = positioning;
 
     // Создание клавиатуры
     this.createKeyboard();
@@ -37,19 +40,23 @@ class MessageKeyboard {
     // Уникальный идентификатор текущей клавиатуры 
     const keyboardID = ID();
 
-    // Кнопки на клавиатуре
-    const inline_keyboard =
-      (this.inline) ?
-        [new Array(...this.buttons)
-          .map(pair => { return { text: pair[1].text, callback_data: pair[0] + '_' + keyboardID }; })] :
-        new Array(...this.buttons)
-          .map(pair => { return [{ text: pair[1].text, callback_data: pair[0] + '_' + keyboardID }]; });
-
     const bot = this.bot;
     const chatId = this.chatId;
     const message = this.message;
     const buttons = this.buttons;
     const self = this;
+
+    // Кнопки на клавиатуре
+    const inline_keyboard =
+      (this.inline) ?
+        [new Array(...this.buttons)
+          .map(pair => { return { text: pair[1].text, callback_data: pair[0] + '_' + keyboardID }; })] :
+        (this.positioning) ?
+          this.positioning.map(line => line.map(button => {
+            return { text: buttons.get(button).text, callback_data: button + '_' + keyboardID };
+          })) :
+          new Array(...this.buttons)
+            .map(pair => { return [{ text: pair[1].text, callback_data: pair[0] + '_' + keyboardID }]; });
 
     // Отправить новое сообщение или отредактировать старое
     if (self.message_id === undefined)

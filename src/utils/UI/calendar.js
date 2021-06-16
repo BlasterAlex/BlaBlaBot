@@ -2,7 +2,7 @@ const moment = require('moment-timezone');
 const Emitter = require('pattern-emitter');
 
 // Локаль клавиатуры (en, ru)
-const locale = require('../../../config/config.json').locale;
+const locale = require('../../../config/app.json').locale;
 
 // Сообщение с клавиатуры для отмены операции
 const cancelMessage = 'отмена';

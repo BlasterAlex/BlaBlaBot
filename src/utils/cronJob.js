@@ -1,8 +1,8 @@
 const fs = require('fs');
 const CronJob = require('cron').CronJob;
 const UserRepository = require('../repositories/UserRepository');
-const config = require('../../config/config.json');
-const bestTrips = require('./bestTrips');
+const config = require('../../config/app.json');
+const bestTrips = require('./trips/findBest');
 const randomPhoto = require('./randomPhoto');
 
 // Список cron-задач

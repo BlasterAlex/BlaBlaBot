@@ -1,18 +1,18 @@
 const fs = require('fs');
 const axios = require('axios');
 const geodist = require('geodist');
-const cronJobs = require('./cronJobs');
+const cronJob = require('../cronJob');
 const isEqual = require('lodash.isequal');
 const moment = require('moment-timezone');
-const pingHeroku = require('../web').pingHeroku;
-const MessageKeyboard = require('./UI/messageKeyboard');
-const UserRepository = require('../repositories/UserRepository');
+const pingHeroku = require('../../web').pingHeroku;
+const MessageKeyboard = require('../UI/messageKeyboard');
+const UserRepository = require('../../repositories/UserRepository');
 
 // Ключ от blablacar-api
-const apiKey = process.env.BLABLACAR_TOKEN || require('../../config/private.json').BLABLACAR_TOKEN;
+const apiKey = process.env.BLABLACAR_TOKEN || require('../../../config/env.json').BLABLACAR_TOKEN;
 
 // Установка локали для даты
-moment.locale(require('../../config/config.json').locale);
+moment.locale(require('../../../config/app.json').locale);
 
 // Скачивание списка поездок с BlaBlaCar
 const loadTrips = (link, trips = [], fromCursor = null) => {
@@ -160,9 +160,7 @@ module.exports.search = function (bot, chatId, query, tripsQty = 1) {
           buttons.set('addLimit', {
             text: 'Ограничение по времени',
             callback: () => {
-              bot.sendMessage(chatId, fs.readFileSync('data/messages/setTimeLimit.txt'), {
-                parse_mode: 'markdown'
-              });
+              require('../../bot').emitTextEvent(chatId, '/edit limit');
             }
           });
 
@@ -170,7 +168,7 @@ module.exports.search = function (bot, chatId, query, tripsQty = 1) {
             buttons.set('removeCron', {
               text: 'Поездка найдена',
               callback: () => {
-                cronJobs.remove(bot, chatId);
+                cronJob.remove(bot, chatId);
               }
             });
           }
@@ -178,7 +176,7 @@ module.exports.search = function (bot, chatId, query, tripsQty = 1) {
           buttons.set('createCron', {
             text: 'Уведомить о новых поездках',
             callback: () => {
-              cronJobs.create(bot, chatId, trips);
+              cronJob.create(bot, chatId, trips);
             }
           });
 
@@ -203,7 +201,7 @@ module.exports.research = function (bot, chatId) {
 
     // Если это неактивная задача
     if (!user.searchTrips) {
-      return cronJobs.remove(bot, chatId);
+      return cronJob.remove(bot, chatId);
     }
 
     // Получение нового списка поездок
@@ -225,7 +223,7 @@ module.exports.research = function (bot, chatId) {
           ['removeCron', {
             text: 'Поездка найдена',
             callback: () => {
-              cronJobs.remove(bot, chatId);
+              cronJob.remove(bot, chatId);
             }
           }]
         ]));

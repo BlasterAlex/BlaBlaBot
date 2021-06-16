@@ -5,7 +5,7 @@ process.env['NTBA_FIX_350'] = 1;
 const bot = require('./src/bot').bot;
 
 // Подключение к бд
-require('mongoose').connect(process.env.MONGODB_URI || require('./config/private.json').MONGODB_URI, {
+require('mongoose').connect(process.env.MONGODB_URI || require('./config/env.json').MONGODB_URI, {
   useUnifiedTopology: true,
   useNewUrlParser: true,
   useCreateIndex: true,

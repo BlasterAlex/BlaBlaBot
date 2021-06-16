@@ -1,6 +1,6 @@
 {
   "name": "blablabot",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Telegram bot for finding the best trips to BlaBlaCar",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "eslint '**/*.js'",
     "lint:fix": "eslint '**/*.js' --fix",
     "kill": "kill `sudo netstat -nlp | grep :5000 | grep -oP '(\\d+)(?=/node)'`",
-    "dev:linux": "wget --spider https://api.telegram.org/bot`sed -En 's/^\\s*\"TELEGRAM_TOKEN\":\\s*\"(.*)\",?/\\1/p' config/private.json`/setWebhook\\?url\\= --delete-after",
+    "dev:linux": "wget --spider https://api.telegram.org/bot`sed -En 's/^\\s*\"TELEGRAM_TOKEN\":\\s*\"(.*)\",?/\\1/p' config/env.json`/setWebhook\\?url\\= --delete-after",
     "dev:win32": "@powershell -NoProfile -ExecutionPolicy Unrestricted -Command .\\scripts\\devMode.ps1"
   },
   "repository": {

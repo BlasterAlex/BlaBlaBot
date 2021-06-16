@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const commandParser = require('./commands/parser');
-const cronJobs = require('./utils/cronJobs');
+const cronJob = require('./utils/cronJob');
 
 // Настройки подключения и запуск бота
 var bot;
@@ -8,7 +8,7 @@ if (process.env.TELEGRAM_TOKEN) {
   bot = new TelegramBot(process.env.TELEGRAM_TOKEN);
   bot.setWebHook(process.env.HEROKU_URL + bot.token);
 } else {
-  bot = new TelegramBot(require('../config/private.json').TELEGRAM_TOKEN, {
+  bot = new TelegramBot(require('../config/env.json').TELEGRAM_TOKEN, {
     polling: true,
     request: {
       agentClass: require('socks5-https-client/lib/Agent'),
@@ -22,14 +22,19 @@ if (process.env.TELEGRAM_TOKEN) {
 console.log('Bot server started in the ' + (process.env.NODE_ENV || 'development') + ' mode');
 
 // Фоновые события по таймеру
-cronJobs.createAll(bot);
+cronJob.createAll(bot);
+
+// Вызов глобального обработчика текста
+const emitTextEvent = (chatId, message) => {
+  commandParser(bot, chatId, message);
+};
 
 // Обработка сообщений
 bot.onText(/(.+)/, (msg) => {
-  commandParser(bot, msg);
+  emitTextEvent(msg.chat.id, msg.text);
 });
 
 // Вывод ошибок
-bot.on('polling_error', (err) => console.error(err));
+bot.on('polling_error', console.error);
 
-module.exports = { bot };
+module.exports = { bot, emitTextEvent };

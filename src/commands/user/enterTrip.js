@@ -5,50 +5,22 @@ const puppeteer = require('puppeteer');
 
 // Подключаемые модули
 const Calendar = require('../../utils/UI/calendar');
-const geocode = require('../../utils/geocode');
+const geocode = require('../../utils/trips/geocode');
 const getFullName = require('../../utils/getFullName');
 const MessageKeyboard = require('../../utils/UI/messageKeyboard');
 const UserRepository = require('../../repositories/UserRepository');
 
-// Установка локали для даты
-moment.locale(require('../../../config/config.json').locale);
+// Конфигурационный файл
+const config = require('../../../config/app.json');
 
 // Вопросы пользователю
-const questions = [
-  {
-    'quest': 'Дата поездки',
-    'varName': 'date',
-    'keys': ['date', 'дата']
-  },
-  {
-    'quest': 'Время поездки в формате *ЧЧ:ММ*',
-    'varName': 'time',
-    'keys': ['time', 'время']
-  },
-  {
-    'quest': 'Выставим ограничение по времени?',
-    'varName': 'maximumTime',
-    'keys': ['limit', 'огран', 'ограничение']
-  },
-  {
-    'quest': '*Откуда поедем?*\n' + fs.readFileSync('data/messages/enterAddress.txt'),
-    'varName': 'from',
-    'keys': ['from', 'откуда']
-  },
-  {
-    'quest': '*Куда поедем?*\n' + fs.readFileSync('data/messages/enterAddress.txt'),
-    'varName': 'to',
-    'keys': ['to', 'куда']
-  },
-  {
-    'quest': 'По какому критерию подбирать поездки?',
-    'varName': 'sortBy',
-    'keys': ['sort', 'сорт', 'сортировка']
-  },
-];
+const questions = require('../../../config/questions.json');
 
 // Редактирование запроса или ввод полного запроса
 const editTrip = (bot, chatId, editField, callback) => {
+
+  // Установка локали для даты
+  moment.locale(config.locale);
 
   // Подключение обработчиков событий
   const emitter = new Emitter();
@@ -58,7 +30,6 @@ const editTrip = (bot, chatId, editField, callback) => {
     if (msg.from.id === chatId)
       emitter.emit('text', msg.text);
   });
-
 
   // Задать вопрос и получить ответ
   const askQuestion = (callback, questNum = 0, answers = {}, onlyOneField = false) => {
@@ -73,7 +44,7 @@ const editTrip = (bot, chatId, editField, callback) => {
 
         const time = moment(data, 'HH:mm', true);
         if (!time.isValid()) {
-          return bot.sendMessage(chatId, 'Неправильный формат времени, попробуйте еще раз', {
+          return bot.sendMessage(chatId, fs.readFileSync('data/messages/invalidTimeFormat.txt'), {
             parse_mode: 'markdown'
           }).then(() => {
             getValidTime();
@@ -131,26 +102,36 @@ const editTrip = (bot, chatId, editField, callback) => {
 
         // Ограничение на время
         case 'maximumTime': {
-          new MessageKeyboard(bot, chatId, message,
-            new Map([
-              ['yes', {
-                text: 'Да', callback: () => {
-                  bot.sendMessage(chatId, 'Введите ограничение в формате *ЧЧ:ММ*', {
-                    parse_mode: 'markdown'
-                  }).then(function () {
-                    getValidTime();
-                  });
-                }
-              }],
-              ['no', {
-                text: 'Нет', callback: () => {
-                  answers[question.varName] = null;
-                  if (onlyOneField || questNum == questions.length - 1)
-                    return callback(answers);
-                  askQuestion(callback, questNum + 1, answers);
-                }
-              }]
-            ]), 'delete', messageId);
+          UserRepository.find(chatId, users => {
+            const user = users[0];
+            new MessageKeyboard(bot, chatId, message,
+              new Map([
+                ['yes', {
+                  text: onlyOneField && user.maximumTime ? 'Редактировать' : 'Задать',
+                  callback: () => {
+                    bot.sendMessage(chatId, 'Введите ограничение в формате *ЧЧ:ММ*', {
+                      parse_mode: 'markdown'
+                    }).then(function () {
+                      getValidTime();
+                    });
+                  }
+                }],
+                ['no', {
+                  text: onlyOneField && user.maximumTime ? 'Удалить' : 'Не задавать',
+                  callback: () => {
+                    answers[question.varName] = null;
+                    if (onlyOneField || questNum == questions.length - 1)
+                      return callback(answers);
+                    askQuestion(callback, questNum + 1, answers);
+                  }
+                }],
+                ['cancel', {
+                  text: 'Отмена',
+                  callback: () => { callback(null); }
+                }]
+              ]), 'delete', messageId, false, [['yes', 'no'], ['cancel']]
+            );
+          });
           break;
         }
 

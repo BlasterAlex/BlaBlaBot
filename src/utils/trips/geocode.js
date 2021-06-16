@@ -1,9 +1,9 @@
-const config = require('../../config/config.json');
+const config = require('../../../config/app.json');
 
 // Настройки api
 const geocoder = require('node-geocoder')({
   provider: 'opencage',
-  apiKey: process.env.GEOCODER_TOKEN || require('../../config/private.json').GEOCODER_TOKEN
+  apiKey: process.env.GEOCODER_TOKEN || require('../../../config/env.json').GEOCODER_TOKEN
 });
 
 // Получение координат по адресу
